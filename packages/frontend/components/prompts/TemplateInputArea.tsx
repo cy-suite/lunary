@@ -41,7 +41,14 @@ function TemplateInputArea({
             </Text>
             {outputTokens && <TokensBadge tokens={outputTokens} />}
           </Group>
-          <SmartViewer data={output} error={error} />
+          <SmartViewer
+            data={output}
+            error={error}
+            controls={[
+              { label: "Text", value: "text" },
+              { label: "Preview", value: "md" },
+            ]}
+          />
         </>
       )}
     </Box>

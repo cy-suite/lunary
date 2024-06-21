@@ -32,6 +32,8 @@ import { useEffect } from "react"
 
 import { openConfirmModal } from "@mantine/modals"
 
+import Markdown from "react-markdown"
+
 const ghostTextAreaStyles = {
   variant: "unstyled",
   p: 0,
@@ -224,22 +226,31 @@ function ToolCallsMessage({
   )
 }
 
-function TextMessage({ data, onChange = () => {}, editable = false, codeBg }) {
+function TextMessage({
+  data,
+  onChange = (_) => {},
+  editable = false,
+  codeBg,
+  markdown = false,
+}) {
+  const content = data.content || data.text
   return (
     <Code block bg={codeBg}>
-      <ProtectedText>
-        {editable ? (
+      {editable ? (
+        <ProtectedText>
           <Textarea
-            value={data.content || data.text}
+            value={content}
             placeholder="Content"
             data-testid="prompt-chat-editor"
             onChange={(e) => onChange({ ...data, content: e.target.value })}
             {...ghostTextAreaStyles}
           />
-        ) : (
-          data.content || data.text
-        )}
-      </ProtectedText>
+        </ProtectedText>
+      ) : markdown ? (
+        <Markdown>{content}</Markdown>
+      ) : (
+        content
+      )}
     </Code>
   )
 }
@@ -310,6 +321,7 @@ function ChatMessageContent({
   codeBg,
   onChange,
   editable,
+  markdown = false,
 }) {
   return (
     <Stack gap="xs">
@@ -342,6 +354,7 @@ function ChatMessageContent({
           onChange={onChange}
           editable={editable}
           codeBg={codeBg}
+          markdown={markdown}
         />
       )}
 
@@ -431,6 +444,7 @@ export function ChatMessage({
   onChange,
   compact = false,
   mah,
+  markdown = false,
   ...props
 }: {
   data: any
@@ -438,6 +452,7 @@ export function ChatMessage({
   onChange?: any
   compact?: boolean
   mah?: number
+  markdown?: boolean
 }) {
   // TODO FIX
   // Flickering dark mode bug: this is due to scheme being 'light' for a few ms
@@ -451,8 +466,6 @@ export function ChatMessage({
 
   // Add/remove the 'id' and 'name' props required on tool calls
   useEffect(() => {
-    if (!data) return
-
     // Add/remove the 'name' props required on tool calls
     if (data.role === "tool" && editable && typeof data.name !== "string") {
       onChange({ ...data, name: "some-tool-name" })
@@ -531,6 +544,7 @@ export function ChatMessage({
         codeBg={codeBg}
         onChange={onChange}
         editable={editable}
+        markdown={markdown}
       />
 
       <style jsx>{`
