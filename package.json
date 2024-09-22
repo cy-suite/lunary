@@ -14,6 +14,7 @@
     "dev:frontend": "npm -w packages/frontend run dev",
     "dev:backend": "npm -w packages/backend run dev",
     "test": "npx playwright test",
+    "test:debug": "npx playwright test --debug",
     "test:ui": "npx playwright test --ui",
     "postinstall": "npx patch-package"
   },
