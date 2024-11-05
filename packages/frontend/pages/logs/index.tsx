@@ -234,8 +234,8 @@ export default function Logs() {
 
   const {
     data: logs,
-    loading,
-    validating,
+    isLoading,
+    isValidating,
     loadMore,
     mutate: mutateLogs,
   } = useProjectInfiniteSWR(`/runs?${serializedChecks}${sortParams}`);
@@ -244,6 +244,9 @@ export default function Logs() {
     if (shouldMutate) {
       mutateLogs();
       setShouldMutate(null);
+    }
+    if (!hasAccess(user?.role, "settings", "read")) {
+      router.push("/dashboards");
     }
   }, [shouldMutate]);
 
@@ -412,11 +415,13 @@ export default function Logs() {
     [columnsTouched, checks, view],
   );
 
+  console.log(logs);
+
   return (
     <Empty
       enable={
         !viewLoading &&
-        !loading &&
+        !isLoading &&
         !projectLoading &&
         project &&
         !project.activated
@@ -598,7 +603,7 @@ export default function Logs() {
             }
           }}
           key={allColumns[type].length}
-          loading={loading || validating}
+          loading={isLoading || isValidating}
           loadMore={loadMore}
           availableColumns={allColumns[type]}
           visibleColumns={visibleColumns}

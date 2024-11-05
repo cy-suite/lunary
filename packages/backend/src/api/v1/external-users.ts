@@ -112,8 +112,8 @@ users.get("/", checkAccess("users", "list"), async (ctx: Context) => {
   let searchQuery = sql``;
   if (search) {
     searchQuery = sql`and (
-      lower(external_id) ilike lower(${`%${search}%`}) 
-      or lower(props->>'email') ilike lower(${`%${search}%`}) 
+      lower(external_id) ilike lower(${`%${search}%`})
+      or lower(props->>'email') ilike lower(${`%${search}%`})
       or lower(props->>'name') ilike lower(${`%${search}%`})
     )`;
   }
@@ -146,7 +146,7 @@ users.get("/", checkAccess("users", "list"), async (ctx: Context) => {
           run r
         where
           ${filtersQuery}
-          and project_id = ${projectId} 
+          and project_id = ${projectId}
           ${createAtQuery}
         group by
           external_user_id
@@ -162,17 +162,17 @@ users.get("/", checkAccess("users", "list"), async (ctx: Context) => {
         public.external_user eu
         left join user_costs uc on eu.id = uc.external_user_id
       where
-        eu.project_id = ${projectId} 
-        ${searchQuery} 
+        eu.project_id = ${projectId}
+        ${searchQuery}
       order by
-        ${sql.unsafe(orderByClause)} 
+        ${sql.unsafe(orderByClause)}
       limit ${limit}
       offset ${page * limit}
     `,
     sql`
       select count(*) as total
       from public.external_user eu
-      where eu.project_id = ${projectId} 
+      where eu.project_id = ${projectId}
       ${searchQuery}
     `,
   ]);
@@ -216,6 +216,23 @@ users.get("/runs/usage", checkAccess("users", "read"), async (ctx) => {
   ctx.body = runsUsage;
 });
 
+users.get("/props/keys", async (ctx: Context) => {
+  const { projectId } = ctx.state;
+
+  const keysResult = await sql`
+      select distinct key
+        from external_user, jsonb_object_keys(props) as key
+      where
+        project_id = ${projectId}
+      order by
+        key
+    `;
+
+  const uniqueKeys = keysResult.map((row) => row.key);
+
+  ctx.body = uniqueKeys;
+});
+
 /**
  * @openapi
  * /v1/external-users/{id}:
@@ -241,12 +258,12 @@ users.get("/:id", checkAccess("users", "read"), async (ctx: Context) => {
   const { projectId } = ctx.state;
 
   const [row] = await sql`
-    select 
-      * 
-    from 
-      external_user 
-    where 
-      id = ${id} 
+    select
+      *
+    from
+      external_user
+    where
+      id = ${id}
       and project_id = ${projectId}
   `;
 

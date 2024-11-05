@@ -33,7 +33,7 @@ import {
 import { NextSeo } from "next-seo";
 import Router from "next/router";
 import { useEffect, useState } from "react";
-import analytics from "../../utils/analytics";
+import analytics, { deserializeDateRange } from "../../utils/analytics";
 import CopyText from "@/components/blocks/CopyText";
 import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
@@ -49,8 +49,8 @@ import TopModels from "@/components/analytics/TopModels";
 
 import LineChart from "@/components/analytics/LineChart";
 import Link from "next/link";
-import { deserializeDateRange, getDefaultDateRange } from "../analytics";
 import { parseAsString, useQueryState } from "nuqs";
+import { getDefaultDateRange } from "shared";
 
 const columns = [
   {
@@ -206,7 +206,7 @@ function SelectedUser({ id, onClose }) {
                   component={Link}
                   color="grape"
                   size="xs"
-                  href={`/analytics?filters=users=${id}`}
+                  href={`/dashboards?filters=users=${id}`}
                   variant="outline"
                 >
                   Analytics
@@ -310,7 +310,6 @@ export default function Users() {
     "sortDirection",
     parseAsString,
   );
-
 
   const [debouncedSearch] = useDebouncedValue(search, 200);
   const [columnVisibility, setColumnVisibility] = useLocalStorage({

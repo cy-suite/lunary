@@ -20,6 +20,7 @@ import {
   IconAnalyze,
   IconBinaryTree2,
   IconBrandOpenai,
+  IconChevronDown,
   IconChevronRight,
   IconCreditCard,
   IconDatabase,
@@ -58,8 +59,11 @@ import { useProject, useProjects } from "@/utils/dataHooks";
 import { useViews } from "@/utils/dataHooks/views";
 import { useDisclosure, useFocusTrap } from "@mantine/hooks";
 import { useEffect, useState } from "react";
+import { DEFAULT_CHARTS, DEFAULT_DASHBOARD, getDefaultDateRange } from "shared";
 import { ResourceName, hasAccess, hasReadAccess, serializeLogic } from "shared";
 import { getIconComponent } from "../blocks/IconPicker";
+import { useDashboards } from "@/utils/dataHooks/dashboards";
+import { useQueryState, parseAsString } from "nuqs";
 
 function NavbarLink({
   icon: Icon,
@@ -73,17 +77,19 @@ function NavbarLink({
 
   // For logs pages, we want to compare the view param to see if a view is selected
 
-  const active = router.pathname.startsWith("/logs")
-    ? router.asPath.includes(`view=`)
-      ? (() => {
-          const linkParams = new URLSearchParams(link.split("?")[1]);
-          const viewParam = linkParams.get("view");
-          return viewParam
-            ? router.asPath.includes(`view=${viewParam}`)
-            : router.asPath.startsWith(link);
-        })()
-      : router.asPath.startsWith(link)
-    : router.pathname.startsWith(link);
+  const active = (() => {
+    const linkParams = new URLSearchParams(link.split("?")[1]);
+    if (router.pathname.startsWith("/logs")) {
+      if (router.asPath.includes(`view=`)) {
+        const viewParam = linkParams.get("view");
+        if (viewParam) {
+          return router.asPath.includes(`view=${viewParam}`);
+        }
+      }
+      return router.asPath.startsWith(link);
+    }
+    return router.pathname.startsWith(link);
+  })();
 
   return (
     <NavLink
@@ -105,6 +111,110 @@ function NavbarLink({
         <ThemeIcon variant={"subtle"} size="md" mr={-10}>
           <Icon size={16} opacity={0.7} />
         </ThemeIcon>
+      }
+    />
+  );
+}
+
+function DashboardLink({ item }) {
+  const router = useRouter();
+  const { dashboards, insert: insertDashboard } = useDashboards();
+
+  const pinned = dashboards.filter((d) => d.pinned);
+
+  const active = (() => {
+    const linkParams = new URLSearchParams(item.link.split("?")[1]);
+    if (router.pathname.startsWith("/logs")) {
+      if (router.asPath.includes(`view=`)) {
+        const viewParam = linkParams.get("view");
+        if (viewParam) {
+          return router.asPath.includes(`view=${viewParam}`);
+        }
+      }
+      return router.asPath.startsWith(item.link);
+    }
+    return router.pathname.startsWith(item.link);
+  })();
+
+  async function createDashboard() {
+    const item = await insertDashboard({
+      name: `Dashboard ${dashboards?.length || 1}`,
+      charts: DEFAULT_CHARTS,
+      pinned: false,
+      filters: {
+        checks: "",
+        granularity: "daily",
+        dateRange: getDefaultDateRange(),
+      },
+    });
+    router.push(`/dashboards/${item.id}`);
+  }
+
+  return (
+    <NavLink
+      w="100%"
+      href={item.link}
+      component={Link}
+      pl={5}
+      styles={{
+        label: {
+          fontSize: 14,
+        },
+      }}
+      onClick={(ev) => {
+        if ((ev.target as HTMLAnchorElement).matches("span #dd, #dd, #dd *")) {
+          ev.preventDefault();
+        }
+      }}
+      h={33}
+      label={`${item.label}${item.soon ? " (soon)" : ""}`}
+      disabled={item.disabled || item.soon}
+      active={active}
+      leftSection={
+        <ThemeIcon variant={"subtle"} size="md" mr={-10}>
+          <item.icon size={16} opacity={0.7} />
+        </ThemeIcon>
+      }
+      rightSection={
+        pinned?.length ? (
+          <Group gap="xs" id="dd">
+            <Menu position="bottom-end">
+              <Menu.Target>
+                <ActionIcon variant="subtle">
+                  <IconChevronDown size={12} />
+                </ActionIcon>
+              </Menu.Target>
+              <Menu.Dropdown
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                }}
+              >
+                {pinned.map((item) => (
+                  <Menu.Item
+                    key={item.id}
+                    onClick={() => router.replace(`/dashboards/${item.id}`)}
+                    leftSection={<IconTimeline size={12} />}
+                  >
+                    {item.name}
+                  </Menu.Item>
+                ))}
+
+                <Button
+                  mt="sm"
+                  variant="outline"
+                  leftSection={<IconPlus size={12} />}
+                  onClick={() => createDashboard()}
+                >
+                  Create
+                </Button>
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
+        ) : (
+          <></>
+        )
       }
     />
   );
@@ -176,7 +286,6 @@ function MenuSection({ item }) {
                 <IconSearch
                   onClick={() => setSearchOn(true)}
                   size={14}
-                  ml="auto"
                   opacity={0.4}
                   style={{
                     cursor: "pointer",
@@ -186,7 +295,8 @@ function MenuSection({ item }) {
                 />
               )}
 
-              <IconChevronRight
+              {/* TODO: put back */}
+              {/* <IconChevronRight
                 onClick={toggle}
                 size={14}
                 opacity={0.6}
@@ -196,7 +306,7 @@ function MenuSection({ item }) {
                   top: -2,
                   transform: `rotate(${opened ? 90 : 0}deg)`,
                 }}
-              />
+              /> */}
             </Group>
           </>
         )}
@@ -205,9 +315,19 @@ function MenuSection({ item }) {
       <Collapse in={opened}>
         {filtered
           ?.filter((subItem) => hasReadAccess(user.role, subItem.resource))
-          .map((subItem) => (
-            <NavbarLink {...subItem} key={subItem.link || subItem.label} />
-          ))}
+          .map((subItem) => {
+            if (subItem.label === "Dashboards") {
+              return (
+                <DashboardLink
+                  item={subItem}
+                  key={subItem.link || subItem.label}
+                />
+              );
+            }
+            return (
+              <NavbarLink {...subItem} key={subItem.link || subItem.label} />
+            );
+          })}
       </Collapse>
     </Box>
   );
@@ -216,24 +336,24 @@ function MenuSection({ item }) {
 export default function Sidebar() {
   const auth = useAuth();
   const router = useRouter();
+
   const { project, setProjectId } = useProject();
 
-  const { user } = useUser();
   const { org } = useOrg();
-  const { projects, isLoading: loading, insert } = useProjects();
+  const { user } = useUser();
   const { views } = useViews();
+  const { projects, isLoading: loading, insert } = useProjects();
 
   const { colorScheme, setColorScheme } = useMantineColorScheme({});
-
   const [createProjectLoading, setCreateProjectLoading] = useState(false);
 
-  const combobox = useCombobox({
+  const projectsCombobox = useCombobox({
     onDropdownClose: () => {
-      combobox.resetSelectedOption();
+      projectsCombobox.resetSelectedOption();
       setSearch("");
     },
     onDropdownOpen: () => {
-      combobox.focusSearchInput();
+      projectsCombobox.focusSearchInput();
     },
   });
 
@@ -268,10 +388,10 @@ export default function Sidebar() {
       c: "blue",
       subMenu: [
         {
-          label: "Analytics",
+          label: "Dashboards",
           icon: IconTimeline,
-          link: "/analytics",
-          resource: "analytics",
+          link: "/dashboards",
+          resource: "dashboards",
         },
         {
           label: "LLM",
@@ -333,14 +453,17 @@ export default function Sidebar() {
         },
       ],
     },
-    !!projectViews.length && {
+  ];
+
+  if (projectViews.length) {
+    APP_MENU.push({
       label: "Smart Views",
       icon: IconListSearch,
       searchable: true,
       resource: "logs",
       subMenu: projectViews,
-    },
-  ].filter((item) => item);
+    });
+  }
 
   async function createProject() {
     if (org.plan === "free" && projects.length >= 3) {
@@ -398,11 +521,15 @@ export default function Sidebar() {
         <Box w="100%">
           <Group wrap="nowrap" my="xs" pb="xs" mx="xs" justify="space-between">
             <Combobox
-              store={combobox}
+              store={projectsCombobox}
               withinPortal={false}
               onOptionSubmit={(id) => {
                 setProjectId(id);
-                combobox.closeDropdown();
+                projectsCombobox.closeDropdown();
+
+                if (router.pathname.startsWith("/dashboards/")) {
+                  router.push(`/dashboards`);
+                }
               }}
               styles={{
                 dropdown: { minWidth: "fit-content", maxWidth: 600 },
@@ -428,7 +555,7 @@ export default function Sidebar() {
                     </ThemeIcon>
                   }
                   rightSection={<Combobox.Chevron />}
-                  onClick={() => combobox.toggleDropdown()}
+                  onClick={() => projectsCombobox.toggleDropdown()}
                   rightSectionPointerEvents="none"
                 >
                   <Tooltip label={project?.name}>
@@ -495,9 +622,9 @@ export default function Sidebar() {
           </Group>
 
           {user &&
-            APP_MENU.filter((item) => !item.disabled).map((item) => (
-              <MenuSection item={item} key={item.label} />
-            ))}
+            APP_MENU.filter((item) => !item.disabled).map((item) => {
+              return <MenuSection item={item} key={item.label} />;
+            })}
         </Box>
       </Stack>
 

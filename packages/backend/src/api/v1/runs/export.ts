@@ -139,10 +139,11 @@ export async function fileExport(
 
           if (input.length && output.length) {
             // convert to JSON string format { messages: [input, output]}
-            const line = JSON.stringify(unCamelObject({
-              messages: [...input, ...output]
-                .map(cleanOpenAiMessage),
-            }));
+            const line = JSON.stringify(
+              unCamelObject({
+                messages: [...input, ...output].map(cleanOpenAiMessage),
+              }),
+            );
             if (line.length > 0) {
               yield line + "\n";
             }

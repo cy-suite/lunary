@@ -295,7 +295,7 @@ export default function Settings() {
 
   useEffect(() => {
     if (!hasAccess(user?.role, "settings", "read")) {
-      router.push("/analytics");
+      router.push("/dashboards");
     }
   }, [user.role]);
 
